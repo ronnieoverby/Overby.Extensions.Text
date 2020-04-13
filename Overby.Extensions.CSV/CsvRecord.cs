@@ -21,8 +21,12 @@ namespace Overby.Extensions.Text
             _data = data ?? throw new ArgumentNullException(nameof(data));
             _dict = new Dictionary<string, string>(stringComparer);
             var i = 0;
-            foreach (var name in names)
+            foreach (var rawName in names)
             {
+                var name = rawName;
+                if (string.IsNullOrEmpty(name))
+                    name = $"{i}_c3a0688513cb451faf5b6560a88c79d9";
+
                 _dict[name] = data.Count > i
                     ? data[i++]
                     : null;

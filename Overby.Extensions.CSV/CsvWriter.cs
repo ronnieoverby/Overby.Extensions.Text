@@ -83,7 +83,7 @@ namespace Overby.Extensions.Text
                     if (c == _delim || c == '\r' || c == '\n' || c == _tq)
                         return true;
 
-                return true;
+                return false;
             }
         }
 

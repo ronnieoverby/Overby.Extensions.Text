@@ -4,179 +4,242 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using static System.Globalization.CultureInfo;
-
 
 namespace Overby.Extensions.Text.Benchmarks
 {
     [DryJob]
+    //[ShortRunJob]
     [MemoryDiagnoser]
 
     [Orderer(SummaryOrderPolicy.FastestToSlowest, MethodOrderPolicy.Declared)]
     public class CsvBenchmarks
     {
-        readonly int _max = 100_000;
+        [Params(35_000)]
+        public int Max { get; set; }
+
+        [Params(
+            "orders 97",
+            //"multiqual 97",
+            "someEsc 97",
+            "somenls 97",
+            "somews 97",
+            //"allqual 97",
+            //"longvals 97",
+            //"shortvals 97",
+            //"emptyvals 97",
+            //"tonsnls 97",
+            "codebase 3"
+            )]
+        public string FileFields { get; set; }
+
+        string _file;
+        int _fields;
+
+        [GlobalSetup]
+        public void Globalsetup()
+        {
+            (_file, _fields) = ParseFileAndFields(FileFields);
+        }
+
+
+        private Stream OpenStream() => File.OpenRead(GetPath(_file));
+        private StreamReader OpenTextReader() => new StreamReader(GetPath(_file));
+
+        private string GetPath(string file) =>
+            $@"C:\Users\ronnie.overby\Desktop\bmcsv\{file}.csv";
+
 
         [Benchmark(Baseline = true)]
         public void overby()
         {
             using var reader = OpenTextReader();
-            foreach (var _ in CsvParsingExtensions.ReadCsv(reader, record: new List<string>(), trimValues: false).Take(_max)) ;
+            foreach (var rec in CsvParsingExtensions.ReadCsv(reader, record: new List<string>(), trimValues: false).Take(Max))
+            {
+                EnsureFieldCount(rec.Count);
+            }
         }
 
-        [Benchmark(Baseline = !true)]
-        public void overbymixed()
+        
+        [Benchmark]
+        public void tspense()
         {
-            using var reader = new StreamReader(filepathmixed);
-            foreach (var _ in CsvParsingExtensions.ReadCsv(reader, record: new List<string>(), trimValues: false).Take(_max)) ;
+            if (_file.Contains("tonsnls"))
+                throw new Exception("too slow to benchmark");
+            
+            if (_file.Contains("codebase"))
+                throw new Exception("too slow to benchmark");
+
+            using var reader = OpenTextReader();
+            using var cr = new CSVFile.CSVReader(reader);
+            foreach (var rec in cr.Take(Max))
+            {
+                EnsureFieldCount(rec.Length);
+            }
         }
 
         //[Benchmark]
-        //public void coretechs()
-        //{
-        //    using var reader = OpenTextReader();
-        //    foreach (var _ in CoreTechs.Common.Text.CsvParsingExtensions.ReadCsv(reader).Take(_max)) ;
-        //}
+        public void coretechs()
+        {
+            using var reader = OpenTextReader();
+            foreach (var rec in CoreTechs.Common.Text.CsvParsingExtensions.ReadCsv(reader).Take(Max))
+            {
+                EnsureFieldCount(rec.Length);
+            }
+        }
 
         //[Benchmark]
-        //public void joshclose()
-        //{
-        //    using var reader = OpenTextReader();
-        //    using var csv = new CsvHelper.CsvReader(reader, new CsvHelper.Configuration.CsvConfiguration(InvariantCulture)
-        //    {
-        //        BadDataFound = null
-        //    });
+        public void joshclose()
+        {
+            using var reader = OpenTextReader();
+            using var csv = new CsvHelper.CsvReader(reader, new CsvHelper.Configuration.CsvConfiguration(InvariantCulture)
+            {
+                BadDataFound = null,
+                  
+            });
 
-        //    for (int i = 0; i < _max && csv.Read(); i++) ;
-        //}
-
-        //[Benchmark]
-        //public void stevehansen()
-        //{
-        //    using var reader = OpenTextReader();
-        //    foreach (var _ in Csv.CsvReader.Read(reader, new Csv.CsvOptions { })) ;
-        //}
-
+            for (int i = 0; i < Max && csv.Read(); i++)
+                EnsureFieldCount(csv.Context.Record.Length);
+        }
 
         //[Benchmark]
-        //public void phatcher()
-        //{
-        //    // https://github.com/phatcher/CsvReader
+        public void stevehansen()
+        {
+            using var reader = OpenTextReader();
+            foreach (var rec in Csv.CsvReader.Read(reader, new Csv.CsvOptions { AllowNewLineInEnclosedFieldValues = true, Separator = ',',  }).Take(Max))
+            {
+                EnsureFieldCount(rec.Values.Length);
+            }
+        }
 
-        //    using var reader = OpenTextReader();
-        //    using var csv = new LumenWorks.Framework.IO.Csv.CsvReader(reader, true)
-        //    {
-        //        //SupportsMultiline = true,
-        //        //DefaultParseErrorAction =  LumenWorks.Framework.IO.Csv.ParseErrorAction.RaiseEvent
-        //    };
-        //    foreach (var _ in csv.Take(_max)) ;
-        //}
 
         //[Benchmark]
-        //public void vb()
-        //{
+        public void phatcher()
+        {
+            // https://github.com/phatcher/CsvReader
 
-        //    using var reader = OpenTextReader();
-        //    var parser = new Microsoft.VisualBasic.FileIO.TextFieldParser(reader)
-        //    {
-        //        Delimiters = new[] { "," },
-        //        TextFieldType = Microsoft.VisualBasic.FileIO.FieldType.Delimited,
-        //        TrimWhiteSpace = false,
-        //        HasFieldsEnclosedInQuotes = true,
-        //    };
-
-        //    foreach (var _ in Read().Take(_max)) ;
-
-        //    IEnumerable<string[]> Read()
-        //    {
-        //        while (true)
-        //        {
-        //            var record = parser.ReadFields();
-        //            if (record == null)
-        //                yield break;
-
-        //            yield return record;
-        //        }
-
-        //    }
-        //}
+            using var reader = OpenTextReader();
+            using var csv = new LumenWorks.Framework.IO.Csv.CsvReader(reader, true)
+            {
+                //SupportsMultiline = true,
+                //DefaultParseErrorAction =  LumenWorks.Framework.IO.Csv.ParseErrorAction.RaiseEvent
+            };
+            foreach (var rec in csv.Take(Max))
+            {
+                EnsureFieldCount(rec.Length);
+            }
+        }
 
         //[Benchmark]
-        //public void bytefish()
-        //{
+        public void vb()
+        {
 
-        //    // this library is … interesting
-        //    // I managed to find this in the tests
+            using var reader = OpenTextReader();
+            var parser = new Microsoft.VisualBasic.FileIO.TextFieldParser(reader)
+            {
+                Delimiters = new[] { "," },
+                TextFieldType = Microsoft.VisualBasic.FileIO.FieldType.Delimited,
+                TrimWhiteSpace = false,
+                HasFieldsEnclosedInQuotes = true,
+            };
 
-        //    var csvParserOptions = new TinyCsvParser.CsvParserOptions(false, ',');
-        //    var csvMapper = new TinyCsvParser.Mapping.CsvStringArrayMapping();
-        //    var csvParser = new TinyCsvParser.CsvParser<string[]>(csvParserOptions, csvMapper);
+            foreach (var rec in Read().Take(Max))
+            {
+                EnsureFieldCount(rec.Length);
+            }
 
-        //    using var stream = OpenStream();
+            IEnumerable<string[]> Read()
+            {
+                while (true)
+                {
+                    var record = parser.ReadFields();
+                    if (record == null)
+                        yield break;
 
-        //    foreach (var record in
-        //        TinyCsvParser.CsvParserExtensions.ReadFromStream(csvParser, stream, Encoding.UTF8).Take(_max))
-        //    {
-        //        if (!record.IsValid)
-        //            throw new Exception(record.Error.Value);
-        //    }
-        //}
+                    yield return record;
+                }
+
+            }
+        }
 
         //[Benchmark]
-        //public void MikeStall()
-        //{
-        //    using var stream = OpenStream();
-        //    var builder = DataAccess.DataTable.New;
-        //    foreach (var _ in DataAccess.DataTableBuilderExtensions.ReadLazy(builder, stream).Rows.Take(_max)) ;
-        //}
+        public void bytefish()
+        {
+
+            // this library is … interesting
+            // I managed to find this in the tests
+
+            var csvParserOptions = new TinyCsvParser.CsvParserOptions(false, ',');
+            var csvMapper = new TinyCsvParser.Mapping.CsvStringArrayMapping();
+            var csvParser = new TinyCsvParser.CsvParser<string[]>(csvParserOptions, csvMapper);
+
+            using var stream = OpenStream();
+
+            foreach (var record in
+                TinyCsvParser.CsvParserExtensions.ReadFromStream(csvParser, stream, System.Text.Encoding.UTF8).Take(Max))
+            {
+                if (!record.IsValid)
+                    throw new Exception(record.Error.Value);
+
+                EnsureFieldCount(record.Result.Length);
+            }
+        }
 
         //[Benchmark]
-        //public void linqToCsv()
-        //{
-        //    using var reader = OpenTextReader();
-        //    foreach (var _ in new LINQtoCSV.CsvContext().Read<LINQtoCSV.DataRow>(reader, new LINQtoCSV.CsvFileDescription
-        //    {
-        //        SeparatorChar = ',',
-        //        FirstLineHasColumnNames = true,
-        //    }).Take(_max)) ;
-        //}
+        public void MikeStall()
+        {
+            using var stream = OpenStream();
+            var builder = DataAccess.DataTable.New;
+            foreach (var rec in DataAccess.DataTableBuilderExtensions.ReadLazy(builder, stream).Rows.Take(Max)) 
+            {
+                EnsureFieldCount(rec.Values.Count);
+            }
+
+        }
+
+        //[Benchmark]
+        public void linqToCsv()
+        {
+            using var reader = OpenTextReader();
+            foreach (var rec in new LINQtoCSV.CsvContext().Read<LINQtoCSV.DataRow>(reader, new LINQtoCSV.CsvFileDescription
+            {
+                SeparatorChar = ',',
+                FirstLineHasColumnNames = true,
+            }).Take(Max))
+            {
+                EnsureFieldCount(rec.Count);
+            }
+        }
 
         //[Benchmark] // they don't support streaming
         public void svcstack()
         {
             using var reader = OpenTextReader();
-            foreach (var _ in ServiceStack.Text.CsvSerializer.DeserializeFromReader<IEnumerable<object>>(reader)) ;
+            foreach (var _ in ServiceStack.Text.CsvSerializer.DeserializeFromReader<IEnumerable<object>>(reader))
+            {
+                // can't count the columns
+            }
         }
 
-        [Benchmark]
-        public void tspense()
+
+
+
+
+        private void EnsureFieldCount(int count)
         {
-            using var reader = OpenTextReader();
-            using var cr = new CSVFile.CSVReader(reader);
-            foreach (var _ in cr.Take(_max)) ;
+            if (count != _fields)
+                throw new InvalidOperationException($"wrong fields: {count}/{_fields}");
         }
 
-        [Benchmark]
-        public void tspenseasync()
+
+        (string file, int fields) ParseFileAndFields(string s)
         {
-            using var reader = OpenTextReader();
-            using var cr = new CSVFileAsync.CSVReader(reader);
-            
+            var split = s.Split();
+            return (split[0], int.Parse(split[1]));
+
         }
 
-        [Benchmark]
-        public void tspensemixed()
-        {
-            using var reader = new StreamReader(filepathmixed);
-            using var cr = new CSVFile.CSVReader(reader);
-            foreach (var _ in cr.Take(_max)) ;
-        }
 
-        const string filepath = @"C:\Users\ronnie.overby\Desktop\million_orders.csv";
-        const string filepathmixed = @"C:\Users\ronnie.overby\Desktop\million_orders_mixed.csv";
-
-        private Stream OpenStream() => File.OpenRead(filepath);
-        private StreamReader OpenTextReader() => new StreamReader(filepath);
     }
+
 }
