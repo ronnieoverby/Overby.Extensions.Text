@@ -86,7 +86,7 @@ namespace Overby.Extensions.Text
                     }
 
                     if (returnSplitChars)
-                        yield return c.ToString(CultureInfo.InvariantCulture);
+                        yield return c.ToString();
                 }
                 else
                 {

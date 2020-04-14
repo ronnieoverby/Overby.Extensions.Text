@@ -103,7 +103,7 @@ namespace Overby.Extensions.Text
 
         public static string Escape(in string s, in char qualifier)
         {
-            var q = qualifier.ToString(InvariantCulture);
+            var q = qualifier.ToString();
             return s.Replace(q, q + qualifier);
         }
 
