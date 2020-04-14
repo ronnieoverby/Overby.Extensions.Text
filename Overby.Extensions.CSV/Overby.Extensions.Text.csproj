@@ -2,6 +2,14 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard1.3;net46</TargetFrameworks>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>1.0.0-beta1</Version>
+    <Copyright>2020 Ronnie Overby</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/ronnieoverby/Overby.Extensions.Text</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ronnieoverby/Overby.Extensions.Text</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Description>Text related stuff. CSV reading/writing.</Description>
   </PropertyGroup>
 
   <ItemGroup>
