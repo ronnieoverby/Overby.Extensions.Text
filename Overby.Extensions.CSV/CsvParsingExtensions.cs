@@ -424,7 +424,9 @@ namespace Overby.Extensions.Text
             if (!it.MoveNext())
                 yield break;
 
-            IList<string> header = it.Current;
+            var header = record == null
+                ? it.Current
+                : new List<string>(it.Current);
 
             while (it.MoveNext())
                 yield return new CsvRecord(header, it.Current, fieldKeyComparer ?? StringComparer.OrdinalIgnoreCase);
