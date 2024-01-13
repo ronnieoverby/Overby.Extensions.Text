@@ -9,18 +9,18 @@ namespace Overby.Extensions.Text
 {
     public class CsvWriter
     {
-        readonly TextWriter _writer;
-        readonly char _delim;
-        readonly char _tq;
-        bool _newRec = true;
+        private readonly TextWriter _writer;
+        private readonly char _delim;
+        private readonly char _tq;
+        private bool _newRec = true;
 
-        public Qual QualifySetting { get; set; } = Qual.Auto;
+        public QualifyMode QualifySetting { get; set; } = QualifyMode.WhenNeeded;
 
-        public enum Qual
+        public enum QualifyMode
         {
-            Auto, // qualify text if needed
-            Force, // qualify text
-            Prevent // do not qualify text
+            WhenNeeded,
+            Always,
+            Never
         }
 
         public CsvWriter(TextWriter writer, char delimiter = ',', char textQualifier = '"')
@@ -66,21 +66,21 @@ namespace Overby.Extensions.Text
 
         public CsvWriter AddField(object obj)
         {
-            if (!(obj is string s))
+            if (obj is not string s)
                 s = obj?.ToString() ?? "";
 
-            if (QualifySetting == Qual.Prevent)
+            if (QualifySetting == QualifyMode.Never)
                 return AddRawField(s);
 
-            if (QualifySetting == Qual.Force || ShouldQualifyValue())
+            if (QualifySetting == QualifyMode.Always || ShouldQualifyValue())
                 return AddRawField(Qualify(s, _tq));
 
             return AddRawField(s);
 
             bool ShouldQualifyValue()
             {
-                foreach (char c in s)
-                    if (c == _delim || c == '\r' || c == '\n' || c == _tq)
+                foreach (var c in s)
+                    if (c == _delim || c is '\r' or '\n' || c == _tq)
                         return true;
 
                 return false;
@@ -109,12 +109,13 @@ namespace Overby.Extensions.Text
 
         public CsvWriter EndRecord()
         {
-            _writer.Write(Environment.NewLine);
+            _writer.WriteLine();
             _newRec = true;
             return this;
         }
 
-        public static void Write<T>(IEnumerable<T> data, TextWriter writer, char delimiter = ',', char textQualifier = '"')
+        public static void Write<T>(IEnumerable<T> data, TextWriter writer, char delimiter = ',',
+            char textQualifier = '"')
             where T : ICsvWritable
         {
             var csv = new CsvWriter(writer, delimiter, textQualifier);

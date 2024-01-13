@@ -14,7 +14,7 @@ namespace Overby.Extensions.Text.Tests
         public void Codebase()
         {
 			using var writer = new StreamWriter(@"C:\Users\ronnie.overby\Desktop\bmcsv\codebase.csv");
-			var csv = new CsvWriter(writer) { QualifySetting = CsvWriter.Qual.Auto };
+			var csv = new CsvWriter(writer) { QualifySetting = CsvWriter.QualifyMode.WhenNeeded };
 
 			csv.AddRecord("filepath", "size", "contents");
 
